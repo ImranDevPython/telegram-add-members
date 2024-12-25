@@ -17,7 +17,7 @@ This project is a Telegram member scraper and adder. It allows you to scrape mem
 ## Setup
 1. Clone the repository:
    ```bash
-   git clone https://github.com/ImranDevJourneyYoutube/telegram-add-members.git
+   git clone https://github.com/ImranDevPython/telegram-add-members.git
    ```
 2. Navigate to the project directory:
    ```bash
