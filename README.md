@@ -12,12 +12,12 @@ This project is a Telegram member scraper and adder. It allows you to scrape mem
 - Python 3.7+
 - Telethon library
 - A Telegram account
-- Admin rights in the target group
+- Admin rights in the target group to add members
 
 ## Setup
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ImranDevJourneyYoutube/telegram-add-members.git
    ```
 2. Navigate to the project directory:
    ```bash
@@ -39,7 +39,7 @@ This project is a Telegram member scraper and adder. It allows you to scrape mem
 4. Confirm the operation and monitor the progress.
 
 ## Safety Guidelines
-- It is recommended to add no more than 50-100 members per day and no more than 35 members per hour to avoid triggering Telegram's restrictions.
+- It is recommended to add no more than 50 members per day and no more than 35 members per hour to avoid triggering Telegram's restrictions.
 - Ensure you have the necessary permissions in the target group to add members.
 
 ## Troubleshooting
