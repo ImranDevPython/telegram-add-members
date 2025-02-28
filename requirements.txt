@@ -1,1 +1,4 @@
 telethon
+aiosqlite
+python-dotenv
+asyncio
