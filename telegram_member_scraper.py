@@ -1,6 +1,6 @@
 from telethon.sync import TelegramClient
 from telethon.tl.functions.channels import InviteToChannelRequest, GetParticipantRequest
-from telethon.errors import FloodWaitError, UserPrivacyRestrictedError, PeerFloodError, SessionPasswordNeededError
+from telethon.errors import FloodWaitError, UserPrivacyRestrictedError, PeerFloodError, SessionPasswordNeededError, UserIdInvalidError
 import time
 import sys
 import platform
@@ -130,6 +130,21 @@ def parse_member_selection(selection_str, max_members):
     
     return sorted(list(selected))
 
+def parse_group_identifier(identifier):
+    """Parses a group identifier (username or chat ID) and returns the chat ID.
+    Raises ValueError if the identifier is invalid.
+    """
+    if identifier.startswith('@') or identifier.startswith('https://t.me/'):
+        return identifier  # Return username as is, get_entity will handle it
+    else:
+        try:
+            chat_id = int(identifier)
+            if chat_id >= 0:
+                raise ValueError("Chat ID must be a negative integer.")
+            return chat_id
+        except ValueError:
+            raise ValueError("Invalid group identifier. Please enter a valid username (starting with @) or a negative integer chat ID.")
+
 async def main():
     client = TelegramClient('session_name', API_ID, API_HASH)
     
@@ -157,15 +172,39 @@ async def main():
     
 
     try:
-        # Original group handling logic remains unchanged
-        print("\nFor group usernames, enter without 'https://t.me/'")
-        source_group = input("\nEnter source group username(to scrape): ").replace('https://t.me/', '')
-        target_group = input("\nEnter target group username: (to add)").replace('https://t.me/', '')
+        print("\nFor group usernames, enter with or without 'https://t.me/' (e.g., @mygroup or mygroup).")
+        print("For group IDs, enter the negative integer ID (e.g., -1001234567890).")
 
+        while True:
+            source_group_input = input("\nEnter source group username or ID (to scrape): ").replace('https://t.me/', '')
+            try:
+                source_group = parse_group_identifier(source_group_input)
+                source_group_entity = await client.get_entity(source_group)
+                source_group_id = source_group_entity.id #always use id
+                print(f"Source group: {source_group_entity.title} (ID: {source_group_id})")
+                break
+            except ValueError as e:
+                print(f"Error: {e}")
+            except Exception as e:
+                print(f"Error getting source group entity: {e}")
+                sys.exit(1)
+
+        while True:
+            target_group_input = input("\nEnter target group username or ID (to add to): ").replace('https://t.me/', '')
+            try:
+                target_group = parse_group_identifier(target_group_input)
+                target_group_entity = await client.get_entity(target_group)
+                target_group_id = target_group_entity.id
+                print(f"Target group: {target_group_entity.title} (ID: {target_group_id})")
+                break
+            except ValueError as e:
+                print(f"Error: {e}")
+            except Exception as e:
+                print(f"Error getting target group entity: {e}")
+                sys.exit(1)
         print("\nScraping members...")
-        source_group_entity = await client.get_entity(source_group)
+
         members = []
-        
         async for user in client.iter_participants(source_group_entity):
             if not user.bot and user.username:
                 members.append({
@@ -201,11 +240,10 @@ async def main():
                 return
 
         print("\nVerifying admin rights...")
-        target_entity = await client.get_entity(target_group)
         me = await client.get_me()
         
         try:
-            participant = await client(GetParticipantRequest(target_entity, me.id))
+            participant = await client(GetParticipantRequest(target_group_id, me.id))
             is_admin = hasattr(participant.participant, 'admin_rights')
             can_invite = is_admin and participant.participant.admin_rights.invite_users
             
@@ -226,7 +264,7 @@ async def main():
             for i, member in enumerate(selected_members, 1):
                 try:
                     user_to_add = await client.get_entity(member['username'])
-                    await client(InviteToChannelRequest(target_entity, [user_to_add]))
+                    await client(InviteToChannelRequest(target_group_id, [user_to_add]))
                     successful_adds += 1
                     print(f"✓ Added {member['username']} ({i}/{len(selected_members)})")
 
@@ -237,6 +275,9 @@ async def main():
                 except UserPrivacyRestrictedError:
                     privacy_restricted += 1
                     print(f"× Privacy restricted: {member['username']}")
+                except UserIdInvalidError: # Handle invalid user ID
+                    other_errors +=1
+                    print(f"x Invalid user ID: {member['username']}")
                 except (FloodWaitError, PeerFloodError) as e:
                     wait_time = e.seconds if isinstance(e, FloodWaitError) else 600  # Keep 600 as default for PeerFloodError
                     print(f"! Flood wait: {wait_time} seconds")
