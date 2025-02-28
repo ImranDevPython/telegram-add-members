@@ -218,26 +218,33 @@ async def main():
             privacy_restricted = 0
             other_errors = 0
             
+            # Initial delay before adding members
+            initial_delay = 20  # seconds
+            print(f"Waiting for an initial delay of {initial_delay} seconds...")
+            time.sleep(initial_delay)
+
             for i, member in enumerate(selected_members, 1):
                 try:
                     user_to_add = await client.get_entity(member['username'])
                     await client(InviteToChannelRequest(target_entity, [user_to_add]))
                     successful_adds += 1
                     print(f"✓ Added {member['username']} ({i}/{len(selected_members)})")
-                    delay = 10
+
+                    delay = 20 # Increased delay
                     print(f"Waiting {delay} seconds...")
                     time.sleep(delay)
-                    
+
                 except UserPrivacyRestrictedError:
                     privacy_restricted += 1
                     print(f"× Privacy restricted: {member['username']}")
                 except (FloodWaitError, PeerFloodError) as e:
-                    wait_time = e.seconds if isinstance(e, FloodWaitError) else 600
+                    wait_time = e.seconds if isinstance(e, FloodWaitError) else 600  # Keep 600 as default for PeerFloodError
                     print(f"! Flood wait: {wait_time} seconds")
                     for remaining in range(wait_time, 0, -1):
                         print(f"Time remaining: {remaining//60:02d}:{remaining%60:02d}", end='\r')
                         time.sleep(1)
                     print("\nResuming...")
+                    selected_members.insert(i, member)  # Re-insert at the current position
                 except Exception as e:
                     other_errors += 1
                     print(f"× Error: {str(e)}")
